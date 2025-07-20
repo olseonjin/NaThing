@@ -14,6 +14,23 @@ class IssueDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer( // drawer 연결
+        backgroundColor: Colors.grey[900],
+        child: ListView(
+          children: const [
+            DrawerHeader(
+              //decoration: BoxDecoration(color: Colors.grey),
+              child: Text('메뉴', style: TextStyle(color: Colors.white)),
+            ),
+            ListTile(
+              title: Text('홈', style: TextStyle(color: Colors.white)),
+            ),
+            ListTile(
+              title: Text('설정', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
       body: Stack(
         children: [
           Positioned.fill(
