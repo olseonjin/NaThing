@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'splash_screen.dart';
-import 'postProvider.dart';
+import 'provider/postProvider.dart';
 import 'home.dart';
 
 class Login extends StatefulWidget {
@@ -13,18 +13,38 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
 
+  String? content;
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      Provider.of<postProvider>(context, listen: false).getPost();
-    });
+    _wait();
   }
 
   @override
   Widget build(BuildContext context) {
-    String? content = Provider.of<postProvider>(context, listen: false).content;
 
+    if (content == null) {
+      // 로딩 화면
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: Colors.white),
+              const SizedBox(height: 16),
+              Text(
+                'content is null',
+                style: const TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 실제 로그인 화면
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -35,11 +55,7 @@ class _LoginState extends State<Login> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 60),
-                // 로고 이미지
-                Image.asset(
-                  'assets/image/logo.png', // 이미지 경로는 프로젝트에 맞게 설정하세요
-                  height: 60,
-                ),
+                Image.asset('assets/image/logo.png', height: 60),
                 const SizedBox(height: 12),
                 const Text(
                   'NA-Thing',
@@ -50,7 +66,6 @@ class _LoginState extends State<Login> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                // 아이디 입력
                 TextField(
                   style: const TextStyle(color: Colors.black),
                   decoration: InputDecoration(
@@ -64,7 +79,6 @@ class _LoginState extends State<Login> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // 비밀번호 입력
                 TextField(
                   obscureText: true,
                   style: const TextStyle(color: Colors.black),
@@ -90,16 +104,16 @@ class _LoginState extends State<Login> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // 로그인 버튼
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => Home()),
-                    );},
+                        context,
+                        MaterialPageRoute(builder: (context) => SplashScreen()),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black,
@@ -114,7 +128,6 @@ class _LoginState extends State<Login> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // 회원가입 텍스트
                 TextButton(
                   onPressed: () {},
                   child: const Text(
@@ -125,13 +138,9 @@ class _LoginState extends State<Login> {
                 const SizedBox(height: 30),
                 TextButton(
                   onPressed: () {},
-                  child: content == null
-                      ? Center(
-                      child: CircularProgressIndicator()
-                  )
-                      : Text(
-                    content,
-                    style: TextStyle(color: Colors.grey),
+                  child: Text(
+                    content!, // 여기는 이제 null 아님이 보장됨
+                    style: const TextStyle(color: Colors.grey),
                   ),
                 ),
               ],
@@ -140,5 +149,13 @@ class _LoginState extends State<Login> {
         ),
       ),
     );
+  }
+
+  Future<void> _wait() async {
+    await Provider.of<postProvider>(context, listen: false).getPost();
+    setState(() {
+      content = Provider.of<postProvider>(context, listen: false).content;
+      print("content 내용 :$content");
+    });
   }
 }

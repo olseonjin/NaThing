@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'postProvider.dart';
-import 'login.dart';
+import 'provider/postProvider.dart';
+import 'loginpage.dart';
 
 void main() {
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => postProvider()),
-      ],
+    ChangeNotifierProvider(
+      create: (_) => postProvider(),
       child: MyApp(),
     ),
   );

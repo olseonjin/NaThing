@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'appbar.dart';
-import 'issuepage.dart';
+import 'isuuepage.dart';
+import 'issuedetailpage.dart';
+import 'provider/postProvider.dart';
+import 'class/post.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -12,56 +16,99 @@ class Home extends StatefulWidget {
 class _HomePageState extends State<Home> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isReady = false;
-  bool _isIssueExpanded = false; // 이슈 펼침 여부 상태
+  bool _isEditing = false;
+  final TextEditingController _textController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    // 위젯이 렌더링된 이후 이미지 미리 로딩
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await precacheImage(const AssetImage('assets/image/background.png'), context);
-      await precacheImage(const AssetImage('assets/image/starbucks.png'), context);
-
-      // 약간의 여유시간을 둘 수도 있음
-      await Future.delayed(const Duration(milliseconds: 400));
-
-      setState(() {
-        _isReady = true; // 로딩 완료 → 메인 화면으로
-      });
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus && _isEditing) {
+        setState(() {
+          _isEditing = false;
+        });
+      }
     });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _textController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_isReady) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // 로고
-              Image(
-                image: AssetImage('assets/logo.png'),
-                height: 80,
-              ),
-              SizedBox(height: 20),
-              CircularProgressIndicator(color: Colors.white),
-            ],
-          ),
-        ),
-      );
-    }
 
-    return _buildMainUI(); // 여기에 기존 Scaffold 넣기
+    return Scaffold(
+      backgroundColor: Colors.black,
+      drawer: Drawer( // drawer 연결
+        backgroundColor: Colors.grey[900],
+        child: ListView(
+          children: const [
+            DrawerHeader(
+              //decoration: BoxDecoration(color: Colors.grey),
+              child: Text('메뉴', style: TextStyle(color: Colors.white)),
+            ),
+            ListTile(
+              title: Text('홈', style: TextStyle(color: Colors.white)),
+            ),
+            ListTile(
+              title: Text('설정', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+      body: Stack(
+        children: [
+          // 전체 배경 이미지
+          Positioned.fill(
+            child: Image.asset(
+              'assets/image/background.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // AppBar + Body
+          SafeArea(
+            child: Column(
+              children: [
+                Appbar(), // Appbar 위젯 삽입
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildHomeContent(),
+                      _buildRecommendationTab(),
+                    ],
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    border: const Border(
+                      top: BorderSide(color: Colors.grey),
+                    ),
+                  ),
+                  child: _buildBottomNavigationBar(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendationTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Text('추천 탭 내용', style: TextStyle(color: Colors.white)),
+    );
   }
 
   Widget _buildTabBar() {
@@ -80,99 +127,158 @@ class _HomePageState extends State<Home> with SingleTickerProviderStateMixin {
   Widget _buildHomeContent() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: !_isIssueExpanded
-          ? _defaultBody()
-          : _buildIssueBody(),
+      child: _defaultBody(),
     );
   }
-
 
   Widget _defaultBody() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Stack(
-            children: [
-              Image.asset('assets/image/starbucks.png'),
-            ],
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              children: [
+                Image.asset('assets/image/starbucks.png'),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        const Text('글쓰기', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey.shade600.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade600),
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('오늘 감정은 어떠셨나요?', style: TextStyle(color: Colors.white)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      alignment: Alignment.centerLeft,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey),
+          const SizedBox(height: 20),
+          const Text('글쓰기', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade600.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade600),
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('오늘 감정은 어떠셨나요?', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _isEditing
+                          ? Container(
+                              height: 40,
+                              padding: const EdgeInsets.symmetric(horizontal: 0),
+                              alignment: Alignment.centerLeft,
+                              decoration: BoxDecoration(
+                                color: Colors.black,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey),
+                              ),
+                              child: TextField(
+                                controller: _textController,
+                                focusNode: _focusNode,
+                                autofocus: true,
+                                style: const TextStyle(color: Colors.white),
+                                decoration: const InputDecoration(
+                                  hintText: '글을 작성해 보세요',
+                                  hintStyle: TextStyle(color: Colors.grey),
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  isCollapsed: true,
+                                ),
+                                onSubmitted: (_) {
+                                  setState(() {
+                                    _isEditing = false;
+                                  });
+                                },
+                              ),
+                            )
+                          : GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isEditing = true;
+                                });
+                              },
+                              child: Container(
+                                height: 40,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                alignment: Alignment.centerLeft,
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey),
+                                ),
+                                child: Text(
+                                  _textController.text.isEmpty ? '글을 작성해 보세요' : _textController.text,
+                                  style: TextStyle(color: _textController.text.isEmpty ? Colors.grey : Colors.white),
+                                ),
+                              ),
+                            ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        final text = _textController.text.trim();
+                        if (text.isNotEmpty) {
+                          // 이벤트 발생
+                          Provider.of<postProvider>(context, listen: false).writePost(text);
+                          // 입력창 초기화 및 편집 종료
+                          setState(() {
+                            _textController.clear();
+                            _isEditing = false;
+                            // 새로고침
+                            Navigator.pushReplacement(
+                              context,
+                              PageRouteBuilder(
+                                pageBuilder: (context, animation1, animation2) => const Home(),
+                                transitionDuration: Duration.zero,
+                                reverseTransitionDuration: Duration.zero,
+                              ),
+                            );
+                          });
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade700,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Text('글을 작성해 보세요', style: TextStyle(color: Colors.grey)),
+                      child: const Text(
+                        '흘려보내기',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey.shade700,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: const Text(
-                      '흘려보내기',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Align(
-                alignment: Alignment.centerRight,
-                child: Text('AI피드백 보러가기', style: TextStyle(color: Colors.grey)),
-              ),
-              _buildIssueBody(),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: Text('AI피드백 보러가기', style: TextStyle(color: Colors.grey)),
+                ),
+                const SizedBox(height: 20),
+                _buildIssueBody(),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-      ],
+          const SizedBox(height: 20),
+        ],
+      ),
     );
   }
 
+  // 이슈 박스
   Widget _buildIssueBody() {
     // 전체 아이템 리스트
-    final List<Widget> issueItems = [
-      _buildIssueItem('unknown', '사진/동영상 - 나띵을 활용법에 대하여 정리해봤어! 궁금해요'),
-      _buildIssueItem('감정없는 감정 premium', '하..진짜 회사 때려치울까 누구는 하라하고 누구는 미안해미안해하지마'),
-      _buildIssueItem('unknown', '내가 나띵하면서 느낀건데, 왜 이제서야 이런 플랫폼이 생각'),
-      _buildIssueItem('unknown', '내가 나띵하면서 느낀건데, 왜 이제서야 이런 플랫폼이 생각'),
-      _buildIssueItem('unknown', 'unknown title'),
-      _buildIssueItem('unknown', '사진/동영상 - 나띵을 활용법에 대하여 정리해봤어! 궁금해요'),
-      _buildIssueItem('감정없는 감정 premium', '하..진짜 회사 때려치울까 누구는 하라하고 누구는 미안해미안해하지마'),
-      _buildIssueItem('unknown', '내가 나띵하면서 느낀건데, 왜 이제서야 이런 플랫폼이 생각'),
-      _buildIssueItem('unknown', 'unknown title'),
-    ];
+    Provider.of<postProvider>(context, listen: false).getPost();
+    List<Post> posts = Provider.of<postProvider>(context, listen: false).posts;
+      // posts를 위젯으로 맵핑
+    final List<Widget> issueItems = posts.map((post) {
+      return _buildIssueItem(post.user_nickname, post.content);
+    }).toList();
 
-    // 최대 3개만 표시하고 싶다면:
-    final visibleItems = _isIssueExpanded ? issueItems : issueItems.take(3).toList();
+    // 최대 3개만 표시
+    final visibleItems = issueItems.take(3).toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -187,9 +293,11 @@ class _HomePageState extends State<Home> with SingleTickerProviderStateMixin {
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
-              setState(() {
-                _isIssueExpanded = !_isIssueExpanded;
-              });
+              // 더보기 누르면 Homepage로 이동
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const IssuePage()),
+              );
             },
             child: Container(
               width: double.infinity,
@@ -205,9 +313,9 @@ class _HomePageState extends State<Home> with SingleTickerProviderStateMixin {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(
-                    _isIssueExpanded ? '닫기 >' : '더보기 >',
-                    style: const TextStyle(color: Colors.grey),
+                  const Text(
+                    '더보기 >',
+                    style: TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
@@ -276,7 +384,7 @@ class _HomePageState extends State<Home> with SingleTickerProviderStateMixin {
               children: [
                 // AppBar
                 Appbar(),
-                if (!_isIssueExpanded)
+                if (false) // _isIssueExpanded 관련 변수 및 코드 전체 삭제
                   _buildTabBar(),
                 Expanded(
                   child: TabBarView(

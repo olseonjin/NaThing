@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import 'home.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -9,48 +10,58 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  // initState 대신 didChangeDependencies를 사용하거나,
-  // initState에서 WidgetsBinding.instance.addPostFrameCallback을 사용해야 해.
+  late VideoPlayerController _controller;
+  bool _isInitialized = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // 여기서는 context가 완전히 준비된 상태이므로 precacheImage를 호출해도 안전해!
-    _loadAssetsAndNavigate();
+  void initState() {
+
+    _controller = VideoPlayerController.asset('assets/video/logo_black.mp4')
+      ..initialize().then((_) {
+        setState(() {
+          _isInitialized = true;
+        });
+        _controller.setLooping(true); // 반복 재생
+        _controller.setPlaybackSpeed(0.75);
+        _controller.play(); // 자동 재생
+        _loadAssetsAndNavigate(); // 여기서 이미지 로딩 및 다음 화면 이동
+      });
+
+    super.initState();
   }
 
   Future<void> _loadAssetsAndNavigate() async {
-    // 이미지 프리로드
+    // 이미지 등 리소스 프리로드
     await precacheImage(const AssetImage('assets/image/background.png'), context);
     await precacheImage(const AssetImage('assets/image/starbucks.png'), context);
 
-    // 약간의 대기 (브랜드 노출 시간 등)
-    //Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(seconds: 1)); // 로딩 대기 시간
 
-    // Home 화면으로 전환
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const Home()),
-    );
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const Home()),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose(); // 리소스 해제
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // 로고
-            Image(
-              image: AssetImage('assets/logo.png'),
-              height: 80,
-            ),
-            SizedBox(height: 20),
-            CircularProgressIndicator(color: Colors.white),
-          ],
-        ),
+        child: _isInitialized
+            ? AspectRatio(
+          aspectRatio: _controller.value.aspectRatio,
+          child: VideoPlayer(_controller),
+        )
+        : const SizedBox.shrink()
       ),
     );
   }
