@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.boot.DAO.PostDAO">
+
+  <select id="list" resultType="com.boot.DTO.PostDTO">
+    SELECT id, content, image_url, user_nickname, created_at
+    FROM post
+    ORDER BY created_at DESC
+  </select>
+
+  <insert id="write" parameterType="map">
+    INSERT INTO post (content, image_url, user_nickname)
+    VALUES (#{content}, #{image_url}, #{user_nickname})
+  </insert>
+
+  <select id="contentView" parameterType="map" resultType="com.boot.DTO.PostDTO">
+    SELECT id, content, image_url, user_nickname, created_at
+    FROM post
+    WHERE id = #{id}
+  </select>
+
+  <update id="modify" parameterType="map">
+    UPDATE post
+    SET content = #{content}, image_url = #{image_url}, user_nickname = #{user_nickname}
+    WHERE id = #{id}
+  </update>
+
+  <delete id="delete" parameterType="map">
+    DELETE FROM post WHERE id = #{id}
+  </delete>
+
+</mapper>
