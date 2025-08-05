@@ -22,7 +22,7 @@ class postProvider with ChangeNotifier {
 
   //게시물 가져오기
   Future<void> getPost() async {
-    final url = 'http://10.0.2.2:8080/api/posts';
+    final url = 'http://13.209.35.79:8080/api/posts';
 
     try {
       final response = await http.get(
@@ -74,7 +74,7 @@ class postProvider with ChangeNotifier {
 
   // 게시물 작성
   Future<void> writePost(String? content) async {
-    final url = 'http://10.0.2.2:8080/api/posts';
+    final url = 'http://13.209.35.79:8080/api/posts';
 
     try {
       final response = await http.post(
@@ -99,10 +99,9 @@ class postProvider with ChangeNotifier {
     }
   }
 
-
   // 게시물 업데이트
   Future<void> updatePost(int id, String? content, String? image_url, String? user_nickname, String? created_at) async {
-    final url = 'http://10.0.2.2:8080/api/posts';
+    final url = 'http://13.209.35.79:8080/api/posts';
 
     try {
       final response = await http.post(
