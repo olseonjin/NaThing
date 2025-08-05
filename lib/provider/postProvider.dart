@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -48,7 +49,7 @@ class postProvider with ChangeNotifier {
             content: item['content'] ?? '',
             image_url: item['image_url'] ?? '',
             user_nickname: item['user_nickname'] ?? '글쓴이',
-            created_at: item['created_at'] ?? '',
+            created_at: (item['created_at'] ?? '2025-07-22 04:11:27').replaceAll(',', ' '),
           );
 
           _posts.add(post);

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'class/post.dart';
 import 'issuedetailpage.dart';
 import 'appbar.dart';
+import 'wiget/buildissueitem.dart';
 
 class IssuePage extends StatelessWidget {
   const IssuePage({super.key});
@@ -14,10 +15,33 @@ class IssuePage extends StatelessWidget {
     List<Post> posts = Provider.of<postProvider>(context, listen: false).posts;
     // posts를 위젯으로 맵핑
     final List<Widget> issueItems = posts.map((post) {
-      return _buildIssueItem(context, post.user_nickname, post.content);
+      return IssueItem(
+        post.user_nickname,
+        post.content,
+        post.created_at,
+        onTap: _showIssueContent,
+      );
     }).toList();
 
+
     return Scaffold(
+      drawer: Drawer( // drawer 연결
+        backgroundColor: Colors.grey[900],
+        child: ListView(
+          children: const [
+            DrawerHeader(
+              //decoration: BoxDecoration(color: Colors.grey),
+              child: Text('메뉴', style: TextStyle(color: Colors.white)),
+            ),
+            ListTile(
+              title: Text('홈', style: TextStyle(color: Colors.white)),
+            ),
+            ListTile(
+              title: Text('설정', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
       body: Stack(
         children: [
           Positioned.fill(
@@ -113,6 +137,7 @@ class IssuePage extends StatelessWidget {
     );
   }
 
+  /*
   Widget _buildIssueItem(BuildContext context, String title, String description) {
     return Material(
       color: Colors.transparent,
@@ -139,14 +164,16 @@ class IssuePage extends StatelessWidget {
       ),
     );
   }
+  */
 
-  void _showIssueContent(BuildContext context, String title, String description) {
+  void _showIssueContent(BuildContext context, String title, String description, double blurStrength) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => IssueDetailPage(
             title: title,
-            description: description
+            description: description,
+            blurStrength: blurStrength
         ),
       ),
     );

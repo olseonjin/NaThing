@@ -5,6 +5,8 @@ import 'isuuepage.dart';
 import 'issuedetailpage.dart';
 import 'provider/postProvider.dart';
 import 'class/post.dart';
+import 'wiget/buildissueitem.dart';
+import 'dart:ui';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -78,6 +80,7 @@ class _HomePageState extends State<Home> with SingleTickerProviderStateMixin {
             child: Column(
               children: [
                 Appbar(), // Appbar 위젯 삽입
+                _buildTabBar(),
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
@@ -272,9 +275,14 @@ class _HomePageState extends State<Home> with SingleTickerProviderStateMixin {
     // 전체 아이템 리스트
     Provider.of<postProvider>(context, listen: false).getPost();
     List<Post> posts = Provider.of<postProvider>(context, listen: false).posts;
-      // posts를 위젯으로 맵핑
+    // posts를 위젯으로 맵핑
     final List<Widget> issueItems = posts.map((post) {
-      return _buildIssueItem(post.user_nickname, post.content);
+      return IssueItem(
+        post.user_nickname,
+        post.content,
+        post.created_at,
+        onTap: _showIssueContent,
+      );
     }).toList();
 
     // 최대 3개만 표시
@@ -328,96 +336,77 @@ class _HomePageState extends State<Home> with SingleTickerProviderStateMixin {
     );
   }
 
-  Widget _buildIssueItem(String title, String description) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          _showIssueContent(context, title, description);
-        },
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(color: Colors.white)),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: const TextStyle(color: Colors.grey),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+  /*
+  Widget _buildIssueItem(String title, String description, String createdAt) {
+    final created = DateTime.parse(createdAt);
+    final now = DateTime.now();
+    final diff = now.difference(created);
+    final hours = diff.inMinutes / 60.0;
+    double blur = (hours / 24.0) * 10.0;
+    if (blur < 0) blur = 0;
+    if (blur > 10) blur = 10;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          children: [
+            // InkWell이 가로 전체를 차지하도록 SizedBox.expand 사용
+            SizedBox(
+              width: double.infinity,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    _showIssueContent(context, title, description);
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title, style: const TextStyle(color: Colors.white)),
+                        const SizedBox(height: 4),
+                        Text(
+                          description,
+                          style: const TextStyle(color: Colors.grey),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ],
-          ),
+            ),
+            if (blur > 0)
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+                  child: Container(
+                    color: Colors.black.withOpacity(0),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
+  */
 
-  void _showIssueContent(BuildContext context, String title, String description) {
+  void _showIssueContent(BuildContext context, String title, String description, double blurStrength) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => IssueDetailPage(
             title: title,
-            description: description
+            description: description,
+            blurStrength: blurStrength
         ),
       ),
-    );
-  }
-
-  Widget _buildMainUI() {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // 전체 배경 이미지
-          Positioned.fill(
-            child: Image.asset(
-              'assets/image/background.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-          // AppBar + TabBar + Body 포함
-          SafeArea(
-            child: Column(
-              children: [
-                // AppBar
-                Appbar(),
-                if (false) // _isIssueExpanded 관련 변수 및 코드 전체 삭제
-                  _buildTabBar(),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildHomeContent(),  // 이미 ScrollView로 구성됨
-                      SingleChildScrollView( // 스크롤 가능하게 감쌈
-                        padding: const EdgeInsets.all(16),
-                        child: Center(
-                          child: Text(
-                            '추천 탭 내용',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    border: const Border(
-                      top: BorderSide(color: Colors.grey), // 구분선
-                    ),
-                  ),
-                  child: _buildBottomNavigationBar(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      //bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 }
