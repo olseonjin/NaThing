@@ -1,8 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'appbar.dart';
+import 'drawerpage.dart';
+import 'provider/postProvider.dart';
 
-class IssueDetailPage extends StatelessWidget {
+class IssueDetailPage extends StatefulWidget {
   final String title;
   final String description;
   final double blurStrength;
@@ -15,143 +18,180 @@ class IssueDetailPage extends StatelessWidget {
   });
 
   @override
+  State<IssueDetailPage> createState() => _IssueDetailPageState();
+}
+
+class _IssueDetailPageState extends State<IssueDetailPage> {
+  String? aiFeedback;
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAIFeedback();
+  }
+
+  Future<void> fetchAIFeedback() async {
+    // mounted 속성을 확인하여 위젯이 여전히 트리에 있는지 확인합니다.
+    if (!mounted) return;
+    setState(() {
+      isLoading = true;
+    });
+
+    final provider = Provider.of<postProvider>(context, listen: false);
+    final result = await provider.fetchAIFeedback(widget.description);
+
+    // 비동기 작업 후에도 위젯이 마운트 상태인지 다시 확인합니다.
+    if (mounted) {
+      setState(() {
+        aiFeedback = result;
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 블러 강도 예시 (원하는 값으로 조절)
-    double blur = blurStrength;
+    double blur = widget.blurStrength;
     return Scaffold(
-      drawer: Drawer( // drawer 연결
-        backgroundColor: Colors.grey[900],
-        child: ListView(
-          children: const [
-            DrawerHeader(
-              //decoration: BoxDecoration(color: Colors.grey),
-              child: Text('메뉴', style: TextStyle(color: Colors.white)),
-            ),
-            ListTile(
-              title: Text('홈', style: TextStyle(color: Colors.white)),
-            ),
-            ListTile(
-              title: Text('설정', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
+      backgroundColor: const Color(0xFF110F0F),
+      drawer: const AppDrawer(),
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/image/background.png',
-              fit: BoxFit.cover,
-            ),
-          ),
           SafeArea(
             child: Column(
               children: [
-                Appbar(),
+                const Appbar(), // Appbar 위젯 이름이 Appbar()라고 가정합니다.
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start, // 시작점에 정렬 (아이콘, 이름)
-                          children: [
-                            Align(
-                              alignment: Alignment.bottomLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    // Handle back button press
-                                    print("상단바 클릭");
-                                  },
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.arrow_circle_left_outlined,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                      const SizedBox(width: 8), // 아이콘과 이름 사이에 간격 추가 (선택 사항)
-                                      const Text( // const를 붙여주는 게 성능에 좋아!
-                                          "사람 이름",
-                                          style: TextStyle(color: Colors.white, fontSize: 16)
-                                      ),
-                                      const Text( // const를 붙여주는 게 성능에 좋아!
-                                          "12:04:56",
-                                          style: TextStyle(color: Colors.white, fontSize: 16)
-                                      ),
-                                    ],
+                        // 뒤로가기 버튼, 작성자, 시간
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                              const CircleAvatar(
+                                radius: 18,
+                                backgroundColor: Colors.transparent,
+                                child: ClipOval(
+                                  child: Image(
+                                    image: AssetImage('assets/icon/profile.png'),
+                                    fit: BoxFit.cover,
+                                    width: 36.0,
+                                    height: 36.0,
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        Align(
-                          alignment: Alignment.bottomLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Text(
-                              title,
-                              style: const TextStyle(color: Colors.white, fontSize: 16),
-                            ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                  "사람 이름", // 실제 데이터로 교체 필요
+                                  style: TextStyle(color: Colors.white, fontSize: 16)
+                              ),
+                              const Spacer(),
+                              const Text(
+                                  "12:04:56", // 실제 데이터로 교체 필요
+                                  style: TextStyle(color: Colors.grey, fontSize: 14)
+                              ),
+                            ],
                           ),
                         ),
-                        // 블러 처리된 이미지를 제목 아래로 이동
+                        // 제목
                         Padding(
-                          padding: const EdgeInsets.only(top: 0, left: 16.0, right: 16.0, bottom: 8.0),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Stack(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          child: Text(
+                            widget.title,
+                            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        // 블러 처리된 이미지
+                        // Padding(
+                        //   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        //   child: ClipRRect(
+                        //     borderRadius: BorderRadius.circular(16),
+                        //     child: Stack(
+                        //       children: [
+                        //         Image.asset(
+                        //           'assets/image/starbucks.png',
+                        //           width: double.infinity,
+                        //           height: 180,
+                        //           fit: BoxFit.cover,
+                        //           errorBuilder: (context, error, stackTrace) {
+                        //             return Container(
+                        //               width: double.infinity,
+                        //               height: 180,
+                        //               color: Colors.grey[800],
+                        //               child: const Center(child: Text('이미지를 불러올 수 없습니다.', style: TextStyle(color: Colors.white))),
+                        //             );
+                        //           },
+                        //         ),
+                        //         Positioned.fill(
+                        //           child: BackdropFilter(
+                        //             filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+                        //             child: Container(
+                        //               color: Colors.black.withOpacity(0.1),
+                        //             ),
+                        //           ),
+                        //         ),
+                        //       ],
+                        //     ),
+                        //   ),
+                        // ),
+                        // 본문 내용
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text(
+                            widget.description,
+                            style: const TextStyle(color: Colors.white, fontSize: 16, height: 1.5),
+                          ),
+                        ),
+                        // AI 피드백
+                        if (isLoading)
+                          const Center(child: CircularProgressIndicator())
+                        else if (aiFeedback != null)
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Image.asset(
-                                  'assets/image/starbucks.png',
-                                  width: double.infinity,
-                                  height: 160,
-                                  fit: BoxFit.cover,
-                                ),
-                                Positioned.fill(
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-                                    child: Container(
-                                      color: Colors.transparent,
-                                    ),
+                                const Text(
+                                  'AI 피드백 (MBTI 분석 결과)',
+                                  style: TextStyle(
+                                    color: Colors.amber,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
                                   ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  aiFeedback!,
+                                  style: const TextStyle(color: Colors.white, fontSize: 15),
                                 ),
                               ],
                             ),
                           ),
-                        ),
+                        // 하단 아이콘 버튼들
                         Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Text(
-                            description,
-                            style: const TextStyle(color: Colors.white, fontSize: 16),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            print('하단 아이콘 클릭');
-                          },
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              const Icon(
-                                Icons.favorite_border,
-                                color: Colors.white54,
-                                size: 28,
+                              IconButton(
+                                icon: const Icon(Icons.favorite_border, color: Colors.white54, size: 28),
+                                onPressed: () {},
                               ),
-                              const SizedBox(width: 32),
-                              const Icon(
-                                Icons.bookmark_border,
-                                color: Colors.white54,
-                                size: 28,
+                              IconButton(
+                                icon: const Icon(Icons.bookmark_border, color: Colors.white54, size: 28),
+                                onPressed: () {},
                               ),
-                              const SizedBox(width: 32),
-                              const Icon(
-                                Icons.share,
-                                color: Colors.white54,
-                                size: 28,
+                              IconButton(
+                                icon: const Icon(Icons.share, color: Colors.white54, size: 28),
+                                onPressed: () {},
                               ),
                             ],
                           ),

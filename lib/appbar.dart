@@ -36,7 +36,7 @@ class Appbar extends StatelessWidget {
                     MaterialPageRoute(builder: (context) => const Home()),
                   );
                 },
-                child: Image.asset('assets/logo.png', height: 24),
+                child: Image.asset('assets/image/logo.png', height: 24),
               ),
             ),
           ),

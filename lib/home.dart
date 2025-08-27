@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'appbar.dart';
-import 'isuuepage.dart';
-import 'issuedetailpage.dart';
 import 'provider/postProvider.dart';
 import 'class/post.dart';
-import 'wiget/buildissueitem.dart';
+import 'recommendationpage.dart';
+import 'drawerpage.dart';
+import 'wiget/postitem.dart';
 import 'dart:ui';
 
 class Home extends StatefulWidget {
@@ -17,100 +17,81 @@ class Home extends StatefulWidget {
 
 class _HomePageState extends State<Home> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  bool _isReady = false;
-  bool _isEditing = false;
-  final TextEditingController _textController = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  late PageController _pageController;
+  int _currentPage = 0;
+  final TextEditingController _postTextController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-
-    _focusNode.addListener(() {
-      if (!_focusNode.hasFocus && _isEditing) {
+    _pageController = PageController();
+    _pageController.addListener(() {
+      if (_pageController.page?.round() != _currentPage) {
         setState(() {
-          _isEditing = false;
+          _currentPage = _pageController.page!.round();
         });
       }
     });
+
+    Provider.of<postProvider>(context, listen: false).getPost();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _textController.dispose();
-    _focusNode.dispose();
+    _pageController.dispose();
+    _postTextController.dispose();
     super.dispose();
+  }
+
+  void _showWritingSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: _buildWritingContent(),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-      backgroundColor: Colors.black,
-      drawer: Drawer( // drawer 연결
-        backgroundColor: Colors.grey[900],
-        child: ListView(
-          children: const [
-            DrawerHeader(
-              //decoration: BoxDecoration(color: Colors.grey),
-              child: Text('메뉴', style: TextStyle(color: Colors.white)),
-            ),
-            ListTile(
-              title: Text('홈', style: TextStyle(color: Colors.white)),
-            ),
-            ListTile(
-              title: Text('설정', style: TextStyle(color: Colors.white)),
+      //배경색
+      backgroundColor: const Color(0xFF110F0F),
+      drawer: const AppDrawer(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showWritingSheet,
+        backgroundColor: Colors.black,
+        child: Image.asset(
+          'assets/logo.png',
+          width: 30,
+          height: 30,
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const Appbar(),
+            _buildTabBar(),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildHomeContent(),
+                  const RecommendationTab(),
+                ],
+              ),
             ),
           ],
         ),
       ),
-      body: Stack(
-        children: [
-          // 전체 배경 이미지
-          Positioned.fill(
-            child: Image.asset(
-              'assets/image/background.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-          // AppBar + Body
-          SafeArea(
-            child: Column(
-              children: [
-                Appbar(), // Appbar 위젯 삽입
-                _buildTabBar(),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildHomeContent(),
-                      _buildRecommendationTab(),
-                    ],
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    border: const Border(
-                      top: BorderSide(color: Colors.grey),
-                    ),
-                  ),
-                  child: _buildBottomNavigationBar(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecommendationTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Text('추천 탭 내용', style: TextStyle(color: Colors.white)),
     );
   }
 
@@ -122,329 +103,289 @@ class _HomePageState extends State<Home> with SingleTickerProviderStateMixin {
       unselectedLabelColor: Colors.grey,
       tabs: const [
         Tab(text: '홈'),
-        Tab(text: '추천'),
+        Tab(text: '감정'),
       ],
     );
   }
 
   Widget _buildHomeContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: _defaultBody(),
-    );
-  }
-
-  Widget _defaultBody() {
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () {
-        FocusScope.of(context).unfocus();
+    return Consumer<postProvider>(
+      builder: (context, provider, child) {
+        if (provider.posts.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildRealtimeEmotionSection(provider.posts),
+              const SizedBox(height: 20),
+              _buildPostFeed(provider.posts),
+              _buildRecommendationSection(),
+            ],
+          ),
+        );
       },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
-              children: [
-                Image.asset('assets/image/starbucks.png'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text('글쓰기', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade600.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade600),
-            ),
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('오늘 감정은 어떠셨나요?', style: TextStyle(color: Colors.white)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _isEditing
-                          ? Container(
-                              height: 40,
-                              padding: const EdgeInsets.symmetric(horizontal: 0),
-                              alignment: Alignment.centerLeft,
-                              decoration: BoxDecoration(
-                                color: Colors.black,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey),
-                              ),
-                              child: TextField(
-                                controller: _textController,
-                                focusNode: _focusNode,
-                                autofocus: true,
-                                style: const TextStyle(color: Colors.white),
-                                decoration: const InputDecoration(
-                                  hintText: '글을 작성해 보세요',
-                                  hintStyle: TextStyle(color: Colors.grey),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  isCollapsed: true,
-                                ),
-                                onSubmitted: (_) {
-                                  setState(() {
-                                    _isEditing = false;
-                                  });
-                                },
-                              ),
-                            )
-                          : GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _isEditing = true;
-                                });
-                              },
-                              child: Container(
-                                height: 40,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                alignment: Alignment.centerLeft,
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey),
-                                ),
-                                child: Text(
-                                  _textController.text.isEmpty ? '글을 작성해 보세요' : _textController.text,
-                                  style: TextStyle(color: _textController.text.isEmpty ? Colors.grey : Colors.white),
-                                ),
-                              ),
-                            ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        final text = _textController.text.trim();
-                        if (text.isNotEmpty) {
-                          // 이벤트 발생
-                          Provider.of<postProvider>(context, listen: false).writePost(text);
-                          // 입력창 초기화 및 편집 종료
-                          setState(() {
-                            _textController.clear();
-                            _isEditing = false;
-                            // 새로고침
-                            Navigator.pushReplacement(
-                              context,
-                              PageRouteBuilder(
-                                pageBuilder: (context, animation1, animation2) => const Home(),
-                                transitionDuration: Duration.zero,
-                                reverseTransitionDuration: Duration.zero,
-                              ),
-                            );
-                          });
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey.shade700,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: const Text(
-                        '흘려보내기',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Align(
-                  alignment: Alignment.centerRight,
-                  child: Text('AI피드백 보러가기', style: TextStyle(color: Colors.grey)),
-                ),
-                const SizedBox(height: 20),
-                _buildIssueBody(),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
     );
   }
 
-  // 이슈 박스
-  Widget _buildIssueBody() {
-    // 전체 아이템 리스트
-    Provider.of<postProvider>(context, listen: false).getPost();
-    List<Post> posts = Provider.of<postProvider>(context, listen: false).posts;
-    // posts를 위젯으로 맵핑
-    final List<Widget> issueItems = posts.map((post) {
-      return IssueItem(
-        post.user_nickname,
-        post.content,
-        post.created_at,
-        onTap: _showIssueContent,
-      );
-    }).toList();
-
-    // 최대 3개만 표시
-    final visibleItems = issueItems.take(3).toList();
-
+  Widget _buildWritingContent() {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade600),
+      height: MediaQuery.of(context).size.height * 0.6,
+      decoration: const BoxDecoration(
+        color: Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
       ),
-      padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              // 더보기 누르면 Homepage로 이동
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const IssuePage()),
-              );
-            },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    '이슈',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('취소', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+                TextButton(
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(const Color(0xFF242222)),
                   ),
-                  const Text(
-                    '더보기 >',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...visibleItems,
-        ],
-      ),
-    );
-  }
-
-  /*
-  Widget _buildIssueItem(String title, String description, String createdAt) {
-    final created = DateTime.parse(createdAt);
-    final now = DateTime.now();
-    final diff = now.difference(created);
-    final hours = diff.inMinutes / 60.0;
-    double blur = (hours / 24.0) * 10.0;
-    if (blur < 0) blur = 0;
-    if (blur > 10) blur = 10;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Stack(
-          children: [
-            // InkWell이 가로 전체를 차지하도록 SizedBox.expand 사용
-            SizedBox(
-              width: double.infinity,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    _showIssueContent(context, title, description);
+                  onPressed: () async {
+                    final content = _postTextController.text.trim();
+                    if (content.isNotEmpty) {
+                      try {
+                        await Provider.of<postProvider>(context, listen: false).writePost(content);
+                        _postTextController.clear(); // 텍스트 필드 비우기
+                        Navigator.pop(context); // 모달 닫기
+                      } catch (e) {
+                        print('게시물 작성 실패: $e');
+                      }
+                    }
                   },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title, style: const TextStyle(color: Colors.white)),
-                        const SizedBox(height: 4),
-                        Text(
-                          description,
-                          style: const TextStyle(color: Colors.grey),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                  child: const GradientText(
+                    'HEND',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal),
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFFFFF5CB),
+                        Color(0xFFAAC6F7),
+                        Color(0xFFC1FFCA),
+                        Color(0xFFEBC0F9),
                       ],
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-            if (blur > 0)
-              Positioned.fill(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-                  child: Container(
-                    color: Colors.black.withOpacity(0),
-                  ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: TextField(
+                controller: _postTextController,
+                autofocus: true,
+                maxLines: null,
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  hintText: '오늘 당신의 감정, HEND 하세요',
+                  hintStyle: TextStyle(color: Colors.grey[600], fontSize: 18),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRealtimeEmotionSection(List<Post> posts) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 150,
+          child: PageView(
+            controller: _pageController,
+            children: [
+              _buildEmotionPageContent(
+                title: '실시간 감정',
+                icon: Icons.access_time,
+                posts: posts.take(3).toList(),
+              ),
+              _buildEmotionPageContent(
+                title: '감정 캠페인',
+                icon: Icons.flag_outlined,
+                posts: posts.take(3).toList(),
+              ),
+              _buildEmotionPageContent(
+                title: '감정 휴지통',
+                icon: Icons.delete_outline,
+                posts: posts.take(3).toList(),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildPageIndicator(),
+      ],
+    );
+  }
+
+  Widget _buildEmotionPageContent({required String title, required IconData icon, required List<Post> posts}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: Colors.yellow, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.normal),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade900,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: posts.length,
+                itemBuilder: (context, index) {
+                  return _buildRealtimeEmotionItem(posts[index]);
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRealtimeEmotionItem(Post post) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '익명 - ${post.content}',
+              style: const TextStyle(color: Colors.white),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              color: Colors.yellow,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(
+              child: Text(
+                'N',
+                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 10),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPageIndicator() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (index) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4.0),
+          width: 8.0,
+          height: 8.0,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _currentPage == index ? Colors.yellow : Colors.grey[700],
+          ),
+        );
+      }),
+    );
+  }
+
+  /// 게시물 피드 리스트 위젯
+  Widget _buildPostFeed(List<Post> posts) {
+    return ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: posts.length,
+      itemBuilder: (context, index) {
+        return Column(
+          children: [
+            PostItem(post: posts[index]),
           ],
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRecommendationSection() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '기분이 좋은 당신에게, 이건 선물 같을 거예요.',
+            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 150,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                //_buildProductCard('assets/image/recommendation1.png'),
+                const SizedBox(width: 12),
+                //_buildProductCard('assets/image/recommendation2.png'),
+                const SizedBox(width: 12),
+                //('assets/image/recommendation3.png'),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
-  */
 
-  void _showIssueContent(BuildContext context, String title, String description, double blurStrength) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => IssueDetailPage(
-            title: title,
-            description: description,
-            blurStrength: blurStrength
-        ),
+  Widget _buildProductCard(String imagePath) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.asset(
+        imagePath,
+        width: 150,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: 150,
+            height: 150,
+            color: Colors.grey[800],
+            child: const Center(child: Text('이미지 없음', style: TextStyle(color: Colors.white))),
+          );
+        },
       ),
     );
   }
-}
-
-Widget _buildBottomNavigationBar() {
-  return BottomNavigationBar(
-    backgroundColor: Colors.transparent,
-    elevation: 0,
-    selectedItemColor: Colors.white,
-    unselectedItemColor: Colors.grey,
-    type: BottomNavigationBarType.fixed,
-    currentIndex: 2,
-    items: const [
-      BottomNavigationBarItem(
-        icon: ImageIcon(AssetImage('assets/icon/total.png'), color: Colors.grey),
-        activeIcon: ImageIcon(AssetImage('assets/icon/total.png'), color: Colors.white),
-        label: '전체보기',
-      ),
-      BottomNavigationBarItem(
-        icon: ImageIcon(AssetImage('assets/icon/news.png'), color: Colors.grey),
-        activeIcon: ImageIcon(AssetImage('assets/icon/news.png'), color: Colors.white),
-        label: 'N뉴스',
-      ),
-      BottomNavigationBarItem(
-        icon: ImageIcon(AssetImage('assets/icon/home.png'), color: Colors.grey),
-        activeIcon: ImageIcon(AssetImage('assets/icon/home.png'), color: Colors.white),
-        label: '홈',
-      ),
-      BottomNavigationBarItem(
-        icon: ImageIcon(AssetImage('assets/icon/campaign.png'), color: Colors.grey),
-        activeIcon: ImageIcon(AssetImage('assets/icon/campaign.png'), color: Colors.white),
-        label: '캠페인',
-      ),
-      BottomNavigationBarItem(
-        icon: ImageIcon(AssetImage('assets/icon/profile.png'), color: Colors.grey),
-        activeIcon: ImageIcon(AssetImage('assets/icon/profile.png'), color: Colors.white),
-        label: '프로필',
-      ),
-    ],
-  );
 }

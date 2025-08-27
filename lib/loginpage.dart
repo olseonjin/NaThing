@@ -18,31 +18,10 @@ class _LoginState extends State<Login> {
   @override
   void initState() {
     super.initState();
-    _wait();
   }
 
   @override
   Widget build(BuildContext context) {
-
-    if (content == null) {
-      // 로딩 화면
-      return Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(color: Colors.white),
-              const SizedBox(height: 16),
-              Text(
-                'content is null',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
 
     // 실제 로그인 화면
     return Scaffold(
@@ -109,7 +88,7 @@ class _LoginState extends State<Login> {
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
+                      Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (context) => SplashScreen()),
                       );
@@ -135,27 +114,11 @@ class _LoginState extends State<Login> {
                     style: TextStyle(color: Colors.grey),
                   ),
                 ),
-                const SizedBox(height: 30),
-                TextButton(
-                  onPressed: () {},
-                  child: Text(
-                    content!, // 여기는 이제 null 아님이 보장됨
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ),
               ],
             ),
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _wait() async {
-    await Provider.of<postProvider>(context, listen: false).getPost();
-    setState(() {
-      content = Provider.of<postProvider>(context, listen: false).content;
-      print("content 내용 :$content");
-    });
   }
 }

@@ -32,15 +32,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _loadAssetsAndNavigate() async {
     // 이미지 등 리소스 프리로드
-    await precacheImage(const AssetImage('assets/image/background.png'), context);
-    await precacheImage(const AssetImage('assets/image/starbucks.png'), context);
+    //await precacheImage(const AssetImage('assets/image/background.png'), context);
+    //await precacheImage(const AssetImage('assets/image/starbucks.png'), context);
 
-    await Future.delayed(const Duration(seconds: 1)); // 로딩 대기 시간
 
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const Home()),
+        MaterialPageRoute(builder: (context) => const Home()),
       );
     }
   }

@@ -85,7 +85,7 @@ class postProvider with ChangeNotifier {
         body: json.encode({
           'content': content,
           'image_url': '',
-          'user_nickname': 'test',
+          'user_nickname': '홍길동',
         }),
       );
       if (response.statusCode == 200) {
@@ -129,6 +129,24 @@ class postProvider with ChangeNotifier {
       }
     } catch (error) {
       throw error; // 에러 처리
+    }
+  }
+
+  Future<String> fetchAIFeedback(String description) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://13.209.35.79:5000/mbti'), 
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': description}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['answer']?.toString() ?? '분석 결과가 없습니다.';
+      } else {
+        return 'AI 분석 결과를 불러올 수 없습니다.';
+      }
+    } catch (e) {
+      return 'AI 분석 결과를 불러올 수 없습니다.';
     }
   }
 
